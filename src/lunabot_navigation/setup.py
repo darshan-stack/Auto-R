@@ -29,6 +29,7 @@ setup(
             'pointcloud_to_scan = lunabot_navigation.pointcloud_to_scan:main',
             'autonomous_patrol = lunabot_navigation.autonomous_patrol:main',
             'frontier_explorer = lunabot_navigation.frontier_explorer:main',
+            'path_tracker = lunabot_navigation.path_tracker:main',
         ],
     },
 )

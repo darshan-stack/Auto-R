@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
 """
-Hazard Detection and Anomaly Detection System
-Detects hazardous/anomalous objects during patrol and alerts control panel
+Hazard Detection and Anomaly Detection System with Path Replanning
+Detects hazardous/anomalous objects during patrol, captures images,
+sends alerts to control panel, and triggers autonomous path replanning
 """
 
 import rclpy
 from rclpy.node import Node
+from rclpy.action import ActionClient
 from sensor_msgs.msg import Image, LaserScan
-from nav_msgs.msg import Odometry
+from nav_msgs.msg import Odometry, Path
 from geometry_msgs.msg import PoseStamped, Twist
 from std_msgs.msg import String
+from nav2_msgs.action import NavigateToPose
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
 import json
 import os
 from datetime import datetime
+import math
 
 
 class HazardDetector(Node):
@@ -24,6 +28,9 @@ class HazardDetector(Node):
         
         # CV Bridge for image conversion
         self.bridge = CvBridge()
+        
+        # Navigation action client for path replanning
+        self.nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
         
         # Subscribers
         self.camera_sub = self.create_subscription(
@@ -35,6 +42,9 @@ class HazardDetector(Node):
         self.odom_sub = self.create_subscription(
             Odometry, '/odom', 
             self.odom_callback, 10)
+        self.path_sub = self.create_subscription(
+            Path, '/traveled_path',
+            self.path_callback, 10)
         
         # Publishers
         self.hazard_alert_pub = self.create_publisher(
@@ -47,9 +57,11 @@ class HazardDetector(Node):
         self.latest_image = None
         self.hazard_detected = False
         self.detection_cooldown = 0
+        self.current_path = []
+        self.avoiding_hazard = False
         
         # Detection parameters
-        self.hazard_distance_threshold = 1.5  # meters
+        self.hazard_distance_threshold = 2.0  # meters - increased for better reaction time
         self.anomaly_threshold = 0.7  # confidence threshold
         self.image_save_dir = os.path.expanduser('~/lunabot_hazards')
         
@@ -58,10 +70,21 @@ class HazardDetector(Node):
         
         # Simple anomaly detection parameters
         self.baseline_intensity = None
-        self.detection_count = 0
+    def odom_callback(self, msg):
+        """Update current robot position"""
+        self.current_pose = msg.pose.pose
         
-        self.get_logger().info('🚨 Hazard Detection System Started')
-        self.get_logger().info(f'📁 Saving hazard images to: {self.image_save_dir}')
+    def camera_callback(self, msg):
+        """Process camera images"""
+        try:
+            self.latest_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+        except Exception as e:
+            self.get_logger().error(f'Camera conversion error: {e}')
+    
+    def path_callback(self, msg):
+        """Update current path from path tracker"""
+        self.current_path = [(pose.pose.position.x, pose.pose.position.y) 
+                           for pose in msg.poses]s enabled')
         
         # Timer for periodic checks
         self.timer = self.create_timer(0.5, self.detection_loop)
@@ -124,14 +147,9 @@ class HazardDetector(Node):
         edges = cv2.Canny(gray, 50, 150)
         edge_density = np.sum(edges > 0) / total_pixels
         
-        # Detect if unusual
-        is_anomaly = unusual_ratio > 0.1 or edge_density > 0.15
-        
-        return is_anomaly, unusual_ratio, edge_density
-    
     def detect_hazard(self, distance, hazard_type):
-        """Detect and report hazard"""
-        if self.hazard_detected or not self.latest_image is not None:
+        """Detect and report hazard with enhanced logging and path replanning"""
+        if self.hazard_detected or self.latest_image is None:
             return
         
         # Perform visual anomaly detection
@@ -146,27 +164,43 @@ class HazardDetector(Node):
             filename = f'hazard_{self.detection_count:04d}_{timestamp}.jpg'
             filepath = os.path.join(self.image_save_dir, filename)
             
-            # Annotate image
+            # Annotate image with enhanced information
             annotated_image = self.annotate_hazard_image(
                 self.latest_image.copy(), distance, hazard_type, color_score, edge_score)
             
             cv2.imwrite(filepath, annotated_image)
             
-            # Create alert message
+            # Create comprehensive alert message
             alert = self.create_alert_message(
                 filepath, distance, hazard_type, color_score, edge_score)
             
-            # Publish alert
+            # Save to hazard log
+            self.hazard_log.append(alert)
+            self.save_hazard_log()
+            
+            # Publish alert to control panel
             self.hazard_alert_pub.publish(String(data=json.dumps(alert)))
             
-            # Log detection
-            self.get_logger().warn(f'🚨 HAZARD DETECTED: {hazard_type}')
-            self.get_logger().warn(f'   Distance: {distance:.2f}m')
-            self.get_logger().warn(f'   Location: ({self.current_pose.position.x:.2f}, {self.current_pose.position.y:.2f})')
-            self.get_logger().warn(f'   Image saved: {filename}')
-            self.get_logger().warn(f'   Color anomaly: {color_score:.2%}, Edge density: {edge_score:.2%}')
+            # Enhanced logging
+            self.get_logger().warn('╔════════════════════════════════════════════════════════════╗')
+            self.get_logger().warn('║         🚨 HAZARD DETECTED - INITIATING AVOIDANCE          ║')
+            self.get_logger().warn('╚════════════════════════════════════════════════════════════╝')
+            self.get_logger().warn(f'  Type: {hazard_type.upper()}')
+            self.get_logger().warn(f'  Distance: {distance:.2f} meters')
+            self.get_logger().warn(f'  GPS Coordinates: ({self.current_pose.position.x:.4f}, {self.current_pose.position.y:.4f})')
+            self.get_logger().warn(f'  Detection #: {self.detection_count}')
+            self.get_logger().warn(f'  Image: {filename}')
+            self.get_logger().warn(f'  Anomaly Scores - Color: {color_score:.2%} | Edge: {edge_score:.2%}')
+            self.get_logger().warn(f'  Timestamp: {timestamp}')
+            self.get_logger().warn('  Action: Stopping robot and replanning path...')
+            self.get_logger().warn('═══════════════════════════════════════════════════════════')
             
-            # Trigger emergency stop/path replan
+            # Trigger emergency stop and path replanning
+            self.trigger_avoidance_and_replan(distance, hazard_type)
+            
+            # Set cooldown to avoid duplicate detections
+            self.detection_cooldown = 40  # ~20 seconds
+            self.hazard_detected = Falseh replan
             self.trigger_avoidance()
             
             # Set cooldown to avoid duplicate detections
@@ -197,28 +231,81 @@ class HazardDetector(Node):
                        (20, y_offset), font, 0.7, (0, 255, 255), 2)
         
         y_offset += 35
-        cv2.putText(image, f'Color: {color_score:.1%} | Edge: {edge_score:.1%}', 
-                   (20, y_offset), font, 0.7, (255, 255, 0), 2)
-        
-        # Add timestamp
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        y_offset += 35
-        cv2.putText(image, timestamp, (20, y_offset), 
-                   font, 0.6, (255, 255, 255), 2)
-        
-        return image
-    
     def create_alert_message(self, filepath, distance, hazard_type, color_score, edge_score):
-        """Create JSON alert message for control panel"""
+        """Create comprehensive JSON alert message for control panel"""
         alert = {
             'timestamp': datetime.now().isoformat(),
-            'hazard_type': hazard_type,
-            'distance': float(distance),
-            'image_path': filepath,
             'detection_id': self.detection_count,
+            'hazard_type': hazard_type,
+            'distance_meters': float(distance),
+            'image_path': filepath,
+            'image_filename': os.path.basename(filepath),
             'anomaly_scores': {
-                'color': float(color_score),
-                'edge_density': float(edge_score)
+                'color_anomaly': float(color_score),
+                'edge_density': float(edge_score),
+                'combined_score': float((color_score + edge_score) / 2)
+            },
+            'path_info': {
+                'current_path_length': len(self.current_path),
+                'path_replanning': 'initiated' if self.avoiding_hazard else 'pending'
+            }
+        }
+        
+        if self.current_pose:
+            alert['gps_coordinates'] = {
+                'x': float(self.current_pose.position.x),
+    def trigger_avoidance_and_replan(self, distance, hazard_type):
+        """
+        Trigger emergency stop and intelligent path replanning
+        Nav2 will automatically replan around the obstacle
+        """
+        # Immediate stop command
+        stop_cmd = Twist()
+        stop_cmd.linear.x = 0.0
+        stop_cmd.angular.z = 0.0
+        self.cmd_vel_override_pub.publish(stop_cmd)
+        
+        self.avoiding_hazard = True
+        self.get_logger().info('🛑 Emergency stop initiated')
+        self.get_logger().info('🔄 Nav2 costmap will mark obstacle and replan path automatically')
+        
+        # Calculate alternative waypoint (move perpendicular to hazard)
+        if self.current_pose:
+            # Get current heading
+            qz = self.current_pose.orientation.z
+            qw = self.current_pose.orientation.w
+            current_yaw = 2 * math.atan2(qz, qw)
+            
+            # Move perpendicular to avoid obstacle (90 degrees right)
+            avoid_yaw = current_yaw + math.pi / 2
+            
+            # Calculate avoidance point 3 meters to the side
+            avoid_x = self.current_pose.position.x + 3.0 * math.cos(avoid_yaw)
+            avoid_y = self.current_pose.position.y + 3.0 * math.sin(avoid_yaw)
+            
+            self.get_logger().info(f'📍 Suggested avoidance point: ({avoid_x:.2f}, {avoid_y:.2f})')
+            self.get_logger().info('   Nav2 will use costmap to find optimal path around hazard')
+        
+        # Note: Nav2's local planner will automatically avoid the obstacle
+        # detected by the laser scan in the costmap. No manual goal needed.
+        # The current navigation goal will be replanned automatically.
+        
+        self.avoiding_hazard = False
+    
+    def save_hazard_log(self):
+        """Save hazard detection log to JSON file"""
+        log_data = {
+            'total_detections': len(self.hazard_log),
+            'session_start': datetime.now().isoformat(),
+            'detections': self.hazard_log
+        }
+        
+        with open(self.hazard_log_file, 'w') as f:
+            json.dump(log_data, f, indent=2)
+        
+        self.get_logger().debug(f'💾 Hazard log updated: {self.hazard_log_file}')
+        
+        return alerte_density': float(edge_score)
             }
         }
         
