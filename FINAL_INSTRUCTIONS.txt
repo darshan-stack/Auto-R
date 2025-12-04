@@ -1,0 +1,144 @@
+#!/bin/bash
+
+echo "════════════════════════════════════════════════════════════"
+echo "  ISRO LUNABOT - COMPLETE AUTONOMOUS NAVIGATION SYSTEM"
+echo "════════════════════════════════════════════════════════════"
+echo ""
+echo "⚠️  IMPORTANT: Make sure Isaac Sim is running with PLAY pressed!"
+echo ""
+echo "Run these commands in 6 SEPARATE terminals:"
+echo ""
+
+cat << 'EOF'
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ TERMINAL 1: Environment Monitor                           ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+cd /home/aids/lunabot_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+ros2 run lunabot_maintenance env_monitor
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ TERMINAL 2: Scan Topic Relay (Isaac Sim → /scan)         ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+cd /home/aids/lunabot_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+ros2 run topic_tools relay /back_2d_lidar/scan /scan
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ TERMINAL 3: SLAM Mapping                                  ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+cd /home/aids/lunabot_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+ros2 launch slam_toolbox online_async_launch.py \
+  use_sim_time:=true \
+  params_file:=/home/aids/lunabot_ws/src/lunabot_navigation/config/slam_params.yaml
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ TERMINAL 4: Navigation Stack (Wait for SLAM map frame!)  ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+cd /home/aids/lunabot_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+ros2 launch nav2_bringup navigation_launch.py \
+  use_sim_time:=true \
+  params_file:=/home/aids/lunabot_ws/src/lunabot_navigation/config/nav2_params.yaml
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ TERMINAL 5: RViz Visualization                            ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+cd /home/aids/lunabot_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+rviz2 -d /home/aids/lunabot_ws/src/lunabot_navigation/rviz/navigation.rviz
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ TERMINAL 6A: Manual Control (Build map first) OR         ┃
+┃ TERMINAL 6B: Autonomous Patrol (After map is built)      ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+OPTION A - Manual Teleop (Drive around to build map):
+────────────────────────────────────────────────────
+cd /home/aids/lunabot_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+ros2 run lunabot_maintenance teleop_keyboard
+
+   Use keyboard to drive:
+   • i = forward
+   • , = backward  
+   • j = turn left
+   • l = turn right
+   • k = stop
+
+OPTION B - Autonomous Patrol (After map exists):
+─────────────────────────────────────────────────
+cd /home/aids/lunabot_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+ros2 run lunabot_maintenance autonomous_patrol
+
+
+════════════════════════════════════════════════════════════
+STARTUP SEQUENCE (IMPORTANT!):
+════════════════════════════════════════════════════════════
+
+1. Start Isaac Sim → Press PLAY button
+2. Launch Terminal 1 (Environment Monitor)
+3. Launch Terminal 2 (Scan Relay) - THIS IS CRITICAL!
+4. Launch Terminal 3 (SLAM) - Wait 5 seconds for map frame
+5. Launch Terminal 4 (Navigation) - Wait for "Managed nodes are active"
+6. Launch Terminal 5 (RViz)
+7. Launch Terminal 6A (Teleop) - Drive around for 30 seconds
+8. OR Launch Terminal 6B (Autonomous) - Let it navigate automatically
+
+
+════════════════════════════════════════════════════════════
+WHAT YOU SHOULD SEE IN RVIZ:
+════════════════════════════════════════════════════════════
+
+✓ TF Tree: map → odom → base_link (green lines connecting frames)
+✓ LaserScan: Red/white points showing obstacles
+✓ Map: Gray/black grid appearing as you drive
+✓ Local Costmap: Pink/red area around robot
+✓ Global Costmap: Full map with obstacles
+✓ Robot Footprint: Green rectangle
+✓ Path Planning: Green line (global path), Red line (local trajectory)
+
+
+════════════════════════════════════════════════════════════
+TROUBLESHOOTING:
+════════════════════════════════════════════════════════════
+
+❌ "No map frame" → SLAM not started or no scan data
+   Solution: Check Terminal 2 (scan relay) is running
+   
+❌ "No scan data" → Isaac Sim lidar not working
+   Solution: Check if /back_2d_lidar/scan has publishers:
+   ros2 topic info /back_2d_lidar/scan
+   
+❌ Robot not moving → Check cmd_vel topic:
+   ros2 topic echo /cmd_vel
+   
+❌ No path generated → Initial pose not set or map not built
+   Solution: Drive manually first to build initial map
+
+EOF
+
+echo ""
+echo "════════════════════════════════════════════════════════════"
+echo "  Ready to launch! Follow the sequence above."
+echo "════════════════════════════════════════════════════════════"
