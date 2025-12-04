@@ -47,6 +47,17 @@ echo "cd /home/aids/lunabot_ws && source /opt/ros/humble/setup.bash && source in
 echo ""
 
 echo "================================================"
+echo "🚨 HAZARD DETECTION (NEW - Run in additional terminals)"
+echo "================================================"
+echo ""
+echo "Terminal 9 - Hazard Detector:"
+echo "cd /home/aids/lunabot_ws && source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 run lunabot_perception hazard_detector"
+echo ""
+echo "Terminal 10 - Control Panel (Alert Receiver):"
+echo "cd /home/aids/lunabot_ws && source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 run lunabot_perception control_panel"
+echo ""
+
+echo "================================================"
 echo "📋 ALTERNATIVE: Fixed Waypoint Patrol (Old Method)"
 echo "================================================"
 echo "Terminal 8 Alternative - Autonomous Patrol (Fixed Waypoints):"

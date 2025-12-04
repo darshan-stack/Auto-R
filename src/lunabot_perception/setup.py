@@ -15,8 +15,8 @@ setup(
     zip_safe=True,
     maintainer='aids',
     maintainer_email='aids@todo.todo',
-    description='TODO: Package description',
-    license='TODO: License declaration',
+    description='Perception and hazard detection for LunaBot',
+    license='MIT',
     extras_require={
         'test': [
             'pytest',
@@ -24,6 +24,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'hazard_detector = lunabot_perception.hazard_detector:main',
+            'control_panel = lunabot_perception.control_panel:main',
         ],
     },
 )

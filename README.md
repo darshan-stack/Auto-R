@@ -7,9 +7,11 @@
 - ✅ **Frontier-Based Exploration** - Autonomous mapping of unknown environments
 - ✅ **SLAM with Map Building** - Real-time mapping using SLAM Toolbox
 - ✅ **Nav2 Navigation Stack** - Professional path planning and obstacle avoidance
+- ✅ **Hazard Detection System** - Real-time obstacle and anomaly detection with image capture
 - ✅ **Environmental Monitoring** - Real-time telemetry and alerts
 - ✅ **Isaac Sim Integration** - Tested with NVIDIA Isaac Sim nova_carter_ROS
 - ✅ **RViz2 Visualization** - Live visualization of maps, paths, and robot state
+- ✅ **Control Panel Alerts** - Automatic hazard image transmission with GPS location
 
 ## 📦 Packages
 
@@ -94,6 +96,18 @@ source /opt/ros/humble/setup.bash && source install/setup.bash
 ros2 run lunabot_navigation frontier_explorer
 ```
 
+#### Terminal 9: Hazard Detector (NEW)
+```bash
+source /opt/ros/humble/setup.bash && source install/setup.bash
+ros2 run lunabot_perception hazard_detector
+```
+
+#### Terminal 10: Control Panel (NEW)
+```bash
+source /opt/ros/humble/setup.bash && source install/setup.bash
+ros2 run lunabot_perception control_panel
+```
+
 **Or use the provided script:**
 ```bash
 ./START_EXPLORATION.sh
@@ -130,6 +144,10 @@ ros2 run lunabot_navigation autonomous_patrol
 - **env_monitor** - Environmental telemetry and alerts
 - **scan_relay** - LiDAR scan topic relay
 - **slam_odom_bridge** - Converts SLAM pose to odometry
+
+### Perception (NEW)
+- **hazard_detector** - Real-time obstacle and anomaly detection
+- **control_panel** - Hazard alert receiver and logger
 
 ## 🛠️ Diagnostic Commands
 
