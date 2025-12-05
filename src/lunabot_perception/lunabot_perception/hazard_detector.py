@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
-Hazard Detection and Anomaly Detection System with Path Replanning
-Detects hazardous/anomalous objects during patrol, captures images,
-sends alerts to control panel, and triggers autonomous path replanning
+Enhanced Hazard Detection and Anomaly Detection System with Path Replanning
+Detects hazardous/anomalous objects using 3D LiDAR and camera, captures images,
+sends alerts to control panel with precise GPS coordinates, and triggers autonomous path replanning
 """
 
 import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionClient
-from sensor_msgs.msg import Image, LaserScan
+from sensor_msgs.msg import Image, PointCloud2
+from sensor_msgs_py import point_cloud2
 from nav_msgs.msg import Odometry, Path
 from geometry_msgs.msg import PoseStamped, Twist
 from std_msgs.msg import String
@@ -20,6 +21,7 @@ import json
 import os
 from datetime import datetime
 import math
+import struct
 
 
 class HazardDetector(Node):

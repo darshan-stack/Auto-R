@@ -1,0 +1,108 @@
+{
+  "total_detections": 3,
+  "session_start": "2025-12-05T10:30:45.123456",
+  "detections": [
+    {
+      "timestamp": "2025-12-05T10:30:45.123456",
+      "detection_id": 1,
+      "hazard_type": "obstacle",
+      "distance_meters": 2.45,
+      "image_path": "/home/aids/lunabot_hazards/hazard_0001_20251205_103045.jpg",
+      "image_filename": "hazard_0001_20251205_103045.jpg",
+      "obstacle_info": {
+        "num_points": 156,
+        "height_meters": 0.85,
+        "width_estimate": "calculating"
+      },
+      "robot_position": {
+        "x": 12.45,
+        "y": -8.32,
+        "z": 0.05,
+        "yaw_radians": 1.57
+      },
+      "obstacle_absolute_position": {
+        "x": 14.90,
+        "y": -8.32,
+        "z": 0.90
+      },
+      "gps_coordinates": {
+        "latitude": -0.000074,
+        "longitude": 0.000133,
+        "altitude": 0.90
+      },
+      "obstacle_relative_position": {
+        "x": 2.45,
+        "y": 0.0,
+        "z": 0.85
+      }
+    },
+    {
+      "timestamp": "2025-12-05T10:32:15.456789",
+      "detection_id": 2,
+      "hazard_type": "obstacle",
+      "distance_meters": 1.80,
+      "image_path": "/home/aids/lunabot_hazards/hazard_0002_20251205_103215.jpg",
+      "image_filename": "hazard_0002_20251205_103215.jpg",
+      "obstacle_info": {
+        "num_points": 234,
+        "height_meters": 1.20,
+        "width_estimate": "calculating"
+      },
+      "robot_position": {
+        "x": 15.10,
+        "y": -7.50,
+        "z": 0.05,
+        "yaw_radians": 0.78
+      },
+      "obstacle_absolute_position": {
+        "x": 16.85,
+        "y": -6.95,
+        "z": 1.25
+      },
+      "gps_coordinates": {
+        "latitude": -0.000062,
+        "longitude": 0.000151,
+        "altitude": 1.25
+      },
+      "obstacle_relative_position": {
+        "x": 1.75,
+        "y": 0.55,
+        "z": 1.20
+      }
+    },
+    {
+      "timestamp": "2025-12-05T10:35:30.789012",
+      "detection_id": 3,
+      "hazard_type": "obstacle",
+      "distance_meters": 2.95,
+      "image_path": "/home/aids/lunabot_hazards/hazard_0003_20251205_103530.jpg",
+      "image_filename": "hazard_0003_20251205_103530.jpg",
+      "obstacle_info": {
+        "num_points": 89,
+        "height_meters": 0.45,
+        "width_estimate": "calculating"
+      },
+      "robot_position": {
+        "x": 18.20,
+        "y": -5.75,
+        "z": 0.05,
+        "yaw_radians": 2.35
+      },
+      "obstacle_absolute_position": {
+        "x": 16.15,
+        "y": -7.85,
+        "z": 0.50
+      },
+      "gps_coordinates": {
+        "latitude": -0.000070,
+        "longitude": 0.000145,
+        "altitude": 0.50
+      },
+      "obstacle_relative_position": {
+        "x": 2.90,
+        "y": -0.50,
+        "z": 0.45
+      }
+    }
+  ]
+}
